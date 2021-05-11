@@ -79,6 +79,7 @@ app.post("/api/users", (req, res) => {
 });
 
 app.post("/api/users/:_id/exercises", async (req, res) => {
+  console.log('body', req.body);
   let { description, duration, date } = req.body;
 
   if (!date) {
@@ -111,9 +112,6 @@ app.get("/api/users/:_id/logs", async (req, res) => {
   const fromTimestamp = moment(from, 'YYYY[-]MM[-]DD').valueOf();
   const toTimestamp = moment(to, 'YYYY[-]MM[-]DD').valueOf();
 
-  console.log('fromTimestamp', fromTimestamp);
-  console.log('toTimestamp', toTimestamp);
-
   try {
     const result = await User.find(
       {
@@ -128,8 +126,6 @@ app.get("/api/users/:_id/logs", async (req, res) => {
     )
       .limit(Number(limitNo))
       .exec();
-
-    console.log('result', result[0].exercises);
 
     res.json({
       count: result[0].exercises.length,
