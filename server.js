@@ -4,6 +4,7 @@ const cors = require("cors");
 const mongoose = require("mongoose");
 const bodyParser = require("body-parser");
 const moment = require('moment');
+const multer = require('multer');
 
 require("dotenv").config();
 
@@ -17,6 +18,10 @@ try {
 }
 
 app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({extended: true}));
+
+const upload = multer();
+app.use(upload.array());
 
 const exerciseSchema = new mongoose.Schema({
   duration: String,
@@ -54,6 +59,8 @@ app.get("/api/users", (req, res) => {
 
 app.post("/api/users", (req, res) => {
   const username = req.body.username;
+
+  console.log("username", username);
 
   User.create({ username })
     .then((result) => {
