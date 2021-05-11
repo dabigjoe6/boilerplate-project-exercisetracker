@@ -3,8 +3,8 @@ const app = express();
 const cors = require("cors");
 const mongoose = require("mongoose");
 const bodyParser = require("body-parser");
-const moment = require('moment');
-const multer = require('multer');
+const moment = require("moment");
+const multer = require("multer");
 
 require("dotenv").config();
 
@@ -12,14 +12,14 @@ try {
   mongoose.connect(process.env.MONGO_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
-    useFindAndModify: false
+    useFindAndModify: false,
   });
 } catch (e) {
   console.warn(e);
 }
 
 app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({extended: true}));
+app.use(bodyParser.urlencoded({ extended: true }));
 
 const upload = multer();
 app.use(upload.array());
@@ -105,7 +105,7 @@ app.post("/api/users/:_id/exercises", async (req, res) => {
         username: success.username,
         description,
         duration: Number(duration),
-        date: moment(date).format("ddd MMM DD YYYY")
+        date: moment(date).format("ddd MMM DD YYYY"),
       });
     }
   );
@@ -114,26 +114,44 @@ app.post("/api/users/:_id/exercises", async (req, res) => {
 app.get("/api/users/:_id/logs", async (req, res) => {
   const { from, to, limit: limitNo } = req.query;
 
-  const fromTimestamp = moment(from, 'YYYY[-]MM[-]DD').valueOf();
-  const toTimestamp = moment(to, 'YYYY[-]MM[-]DD').valueOf();
+  const fromTimestamp = moment(from, "YYYY[-]MM[-]DD").valueOf();
+  const toTimestamp = moment(to, "YYYY[-]MM[-]DD").valueOf();
+
+  let projection = null;
+
+  if (fromTimestamp && toTimestamp) {
+    projection = {
+      _id: 1,
+      duration: 1,
+      description: 1,
+      date: 1,
+      username: 1,
+      exercises: {
+        $elemMatch: { date: { $gte: fromTimestamp, $lte: toTimestamp } },
+      },
+    };
+  }
 
   try {
     const result = await User.find(
       {
         _id: req.params._id,
       },
-      {
-        _id: 1,
-        exercises: {
-          $elemMatch: { date: { $gte: fromTimestamp, $lte: toTimestamp } },
-        },
-      }
+      projection
     )
       .limit(Number(limitNo))
       .exec();
 
+    const { _id, username, description, duration, date, exercises } = result[0];
+
     res.json({
-      count: result[0].exercises.length,
+      _id,
+      username,
+      description,
+      duration,
+      exercises,
+      date: moment(date).format("ddd MMM DD YYYY"),
+      count: exercises.length,
     });
   } catch (e) {
     console.error(e);
