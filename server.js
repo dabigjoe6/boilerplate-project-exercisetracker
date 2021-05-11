@@ -114,6 +114,9 @@ app.post("/api/users/:_id/exercises", async (req, res) => {
 app.get("/api/users/:_id/logs", async (req, res) => {
   const { from, to, limit: limitNo } = req.query;
 
+  console.log('url', req.url);
+  console.log('query', req.query);
+
   const fromTimestamp = moment(from, "YYYY[-]MM[-]DD").valueOf();
   const toTimestamp = moment(to, "YYYY[-]MM[-]DD").valueOf();
 
