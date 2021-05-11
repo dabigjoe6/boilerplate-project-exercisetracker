@@ -79,7 +79,6 @@ app.post("/api/users", (req, res) => {
 });
 
 app.post("/api/users/:_id/exercises", async (req, res) => {
-  console.log('body', req.body);
   let { description, duration, date } = req.body;
 
   if (!date) {
@@ -101,7 +100,13 @@ app.post("/api/users/:_id/exercises", async (req, res) => {
         });
       }
 
-      res.json(success);
+      res.json({
+        _id: req.params.id,
+        username: success.username,
+        description,
+        duration: Number(duration),
+        date: moment(date).format("ddd MMM DD YYYY")
+      });
     }
   );
 });
