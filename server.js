@@ -149,7 +149,7 @@ app.get("/api/users/:_id/logs", async (req, res) => {
       username,
       description,
       duration,
-      exercises,
+      log: exercises,
       date: moment(date).format("ddd MMM DD YYYY"),
       count: exercises.length,
     });
