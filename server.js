@@ -12,6 +12,7 @@ try {
   mongoose.connect(process.env.MONGO_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
+    useFindAndModify: false
   });
 } catch (e) {
   console.warn(e);
@@ -60,8 +61,6 @@ app.get("/api/users", (req, res) => {
 app.post("/api/users", (req, res) => {
   const username = req.body.username;
 
-  console.log("username", username);
-
   User.create({ username })
     .then((result) => {
       const { username, _id } = result;
@@ -84,11 +83,14 @@ app.post("/api/users/:_id/exercises", async (req, res) => {
 
   if (!date) {
     date = Date.now();
+  } else if (date) {
+    date = moment(date).valueOf();
   }
 
   User.findOneAndUpdate(
     { _id: req.params._id },
     { $push: { exercises: { description, duration, date } } },
+    { new: true },
     (error, success) => {
       if (error) {
         console.warn(error);
