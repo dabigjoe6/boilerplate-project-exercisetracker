@@ -5,6 +5,7 @@ const mongoose = require("mongoose");
 const bodyParser = require("body-parser");
 const moment = require("moment");
 const multer = require("multer");
+const ObjectId = mongoose.Types.ObjectId;
 
 require("dotenv").config();
 
@@ -84,7 +85,7 @@ app.post("/api/users/:_id/exercises", async (req, res) => {
   if (!date) {
     date = Date.now();
   } else if (date) {
-    date = moment(date).valueOf();
+    date = moment(date).unix();
   }
 
   User.findOneAndUpdate(
@@ -105,7 +106,7 @@ app.post("/api/users/:_id/exercises", async (req, res) => {
         username: success.username,
         description,
         duration: Number(duration),
-        date: moment(date).format("ddd MMM DD YYYY"),
+        date: moment.unix(date).format("ddd MMM DD YYYY"),
       });
     }
   );
@@ -114,51 +115,70 @@ app.post("/api/users/:_id/exercises", async (req, res) => {
 app.get("/api/users/:_id/logs", async (req, res) => {
   const { from, to, limit: limitNo } = req.query;
 
-  console.log('url', req.url);
-  console.log('query', req.query);
+  const fromDate = moment(from, "YYYY[-]MM[-]DD");
+  const toDate = moment(to, "YYYY[-]MM[-]DD");
 
-  const fromTimestamp = moment(from, "YYYY[-]MM[-]DD").valueOf();
-  const toTimestamp = moment(to, "YYYY[-]MM[-]DD").valueOf();
-
-  let projection = null;
+  const fromTimestamp = fromDate.unix();
+  const toTimestamp = toDate.unix();
 
   if (fromTimestamp && toTimestamp) {
-    projection = {
-      _id: 1,
-      duration: 1,
-      description: 1,
-      date: 1,
-      username: 1,
-      exercises: {
-        $elemMatch: { date: { $gte: fromTimestamp, $lte: toTimestamp } },
-      },
-    };
-  }
-
-  try {
-    const result = await User.find(
+    let docs = await User.aggregate([
+      { $match: { _id: ObjectId(req.params._id) }},
+      { $unwind: "$exercises" },
       {
-        _id: req.params._id,
+        $match: {
+          "exercises.date": { $gte: fromTimestamp, $lte: toTimestamp },
+        },
       },
-      projection
-    )
-      .limit(Number(limitNo))
-      .exec();
+      {
+        $group: {
+          _id: "$_id",
+          logs: { $push: "$exercises" },
+          count: { $sum: 1 },
+          doc: { $first: "$$ROOT" },
+        },
+      },
+      {
+        $replaceRoot: {
+          newRoot: {
+            $mergeObjects: [{ count: "$count", logs: "$logs" }, "$doc"],
+          },
+        },
+      },
+      { $unset: "exercises" },
+    ]);
 
-    const { _id, username, description, duration, date, exercises } = result[0];
+    res.json(docs[0]);
+  } else {
+    try {
+      const result = await User.find({
+        _id: req.params._id,
+      })
+        .limit(limitNo)
+        .exec();
 
-    res.json({
-      _id,
-      username,
-      description,
-      duration,
-      log: exercises,
-      date: moment(date).format("ddd MMM DD YYYY"),
-      count: exercises.length,
-    });
-  } catch (e) {
-    console.error(e);
-    res.status(500).json(e);
+      const {
+        _id,
+        username,
+        description,
+        duration,
+        date,
+        exercises,
+      } = result[0];
+
+      res.json({
+        _id,
+        username,
+        description,
+        duration,
+        log: exercises,
+        date: moment(date).format("ddd MMM DD YYYY"),
+        count: exercises.length,
+      });
+    } catch (e) {
+      console.error(e);
+      res.status(500).json(e);
+    }
   }
 });
 
