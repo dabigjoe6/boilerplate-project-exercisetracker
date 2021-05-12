@@ -141,7 +141,7 @@ app.get("/api/users/:_id/logs", async (req, res) => {
       {
         $replaceRoot: {
           newRoot: {
-            $mergeObjects: [{ count: "$count", logs: "$logs" }, "$doc"],
+            $mergeObjects: [{ count: "$count", log: "$logs" }, "$doc"],
           },
         },
       },
