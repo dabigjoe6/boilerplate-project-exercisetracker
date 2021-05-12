@@ -122,14 +122,18 @@ app.get("/api/users/:_id/logs", async (req, res) => {
   const toTimestamp = toDate.unix();
 
   if (fromTimestamp && toTimestamp) {
-    let docs = await User.aggregate([
-      { $match: { _id: ObjectId(req.params._id) }},
+    let aggregration = [];
+    const preLimit = [
+      { $match: { _id: ObjectId(req.params._id) } },
       { $unwind: "$exercises" },
       {
         $match: {
           "exercises.date": { $gte: fromTimestamp, $lte: toTimestamp },
         },
       },
+    ];
+
+    const postLimit = [
       {
         $group: {
           _id: "$_id",
@@ -146,25 +150,24 @@ app.get("/api/users/:_id/logs", async (req, res) => {
         },
       },
       { $unset: "exercises" },
-    ]);
+    ];
+
+    if (limitNo) {
+      aggregration = [...preLimit, { $limit: Number(limitNo) }, ...postLimit];
+    } else {
+      aggregration = [...preLimit, ...postLimit];
+    }
+
+    let docs = await User.aggregate(aggregration);
 
     res.json(docs[0]);
   } else {
     try {
       const result = await User.find({
         _id: req.params._id,
-      })
-        .limit(limitNo)
-        .exec();
+      }).exec();
 
-      const {
-        _id,
-        username,
-        description,
-        duration,
-        date,
-        exercises,
-      } = result[0];
+      const { _id, username, description, duration, exercises } = result[0];
 
       res.json({
         _id,
@@ -172,7 +175,6 @@ app.get("/api/users/:_id/logs", async (req, res) => {
         description,
         duration,
         log: exercises,
-        date: moment(date).format("ddd MMM DD YYYY"),
         count: exercises.length,
       });
     } catch (e) {
