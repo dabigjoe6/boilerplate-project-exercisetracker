@@ -174,8 +174,8 @@ app.get("/api/users/:_id/logs", async (req, res) => {
         username,
         description,
         duration,
-        log: exercises,
-        count: exercises.length,
+        log: limitNo ? exercises.slice(0, limitNo) : exercises,
+        count: limitNo ? exercises.slice(0, limitNo).length : exercises.length,
       });
     } catch (e) {
       console.error(e);
